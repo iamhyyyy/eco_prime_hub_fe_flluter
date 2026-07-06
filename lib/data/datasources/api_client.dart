@@ -8,17 +8,22 @@ class ApiClient {
 
   ApiClient() {
     dio.options.baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080/api';
-    dio.options.connectTimeout = const Duration(seconds: 10);
+    dio.options.connectTimeout = const Duration(seconds: 15);
+    dio.options.receiveTimeout = const Duration(seconds: 15);
 
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Lấy token từ vùng nhớ bảo mật ra để gắn vào Header
+          // Tự động gắn JWT Token vào mọi request
           String? token = await storage.read(key: 'jwt_token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
+        },
+        onError: (DioException e, handler) {
+          // Xử lý lỗi toàn cục
+          return handler.next(e);
         },
       ),
     );
