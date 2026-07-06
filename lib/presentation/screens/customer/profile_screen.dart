@@ -147,6 +147,8 @@ class _ProfileView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
+                _actionTile(Icons.edit_rounded, 'Cập nhật thông tin', () => _showUpdateProfile(ctx, user)),
+                const SizedBox(height: 8),
                 _actionTile(Icons.lock_outline, 'Đổi mật khẩu', () => _showChangePassword(ctx, userId)),
                 const SizedBox(height: 8),
                 _actionTile(Icons.logout_rounded, 'Đăng xuất', () async {
@@ -229,6 +231,18 @@ class _ProfileView extends StatelessWidget {
     );
   }
 
+  void _showUpdateProfile(BuildContext ctx, UserDto user) {
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _UpdateProfileSheet(
+        user: user,
+        onUpdated: () => ctx.read<ProfileCubit>().load(user.id),
+      ),
+    );
+  }
+
   void _showChangePassword(BuildContext ctx, String userId) {
     final oldCtrl = TextEditingController();
     final newCtrl = TextEditingController();
@@ -270,4 +284,119 @@ class _ProfileView extends StatelessWidget {
   }
 
   String _fmtK(double val) => (val / 1000).toStringAsFixed(0);
+}
+
+class _UpdateProfileSheet extends StatefulWidget {
+  final UserDto user;
+  final VoidCallback onUpdated;
+  const _UpdateProfileSheet({required this.user, required this.onUpdated});
+
+  @override
+  State<_UpdateProfileSheet> createState() => _UpdateProfileSheetState();
+}
+
+class _UpdateProfileSheetState extends State<_UpdateProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _userName;
+  late TextEditingController _email;
+  late TextEditingController _firstName;
+  late TextEditingController _lastName;
+  late TextEditingController _phone;
+  DateTime? _dob;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _userName = TextEditingController(text: widget.user.userName);
+    _email = TextEditingController(text: widget.user.email);
+    _firstName = TextEditingController(text: widget.user.firstName);
+    _lastName = TextEditingController(text: widget.user.lastName);
+    _phone = TextEditingController(text: widget.user.phoneNumber ?? '');
+    _dob = widget.user.dateOfBirth;
+  }
+
+  @override
+  void dispose() {
+    _userName.dispose();
+    _email.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      final payload = {
+        'userName': _userName.text,
+        'email': _email.text,
+        'firstName': _firstName.text,
+        'lastName': _lastName.text,
+        'phoneNumber': _phone.text.isEmpty ? null : _phone.text,
+        'dateOfBirth': _dob?.toUtc().add(const Duration(hours: 7)).toIso8601String(),
+        'isActive': widget.user.isActive,
+      };
+      await UserRepository().updateUser(widget.user.id, payload);
+      if (mounted) {
+        widget.onUpdated();
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật thành công!'), backgroundColor: Colors.green));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật thất bại!'), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Cập nhật thông tin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: TextFormField(controller: _firstName, decoration: const InputDecoration(labelText: 'Tên*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null)),
+                const SizedBox(width: 12),
+                Expanded(child: TextFormField(controller: _lastName, decoration: const InputDecoration(labelText: 'Họ*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(controller: _userName, decoration: const InputDecoration(labelText: 'Username*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
+            const SizedBox(height: 12),
+            TextFormField(controller: _email, decoration: const InputDecoration(labelText: 'Email*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
+            const SizedBox(height: 12),
+            TextFormField(controller: _phone, decoration: const InputDecoration(labelText: 'Số điện thoại')),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(context: context, initialDate: _dob ?? DateTime(2000), firstDate: DateTime(1900), lastDate: DateTime.now());
+                if (date != null) setState(() => _dob = date);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Ngày sinh', border: OutlineInputBorder()),
+                child: Text(_dob != null ? '${_dob!.day}/${_dob!.month}/${_dob!.year}' : 'Chọn ngày sinh'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D47A1), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+              onPressed: _isLoading ? null : _submit,
+              child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Lưu thay đổi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

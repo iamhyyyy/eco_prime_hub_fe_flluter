@@ -28,7 +28,7 @@ class AuthRepository {
         'lastName': lastName,
         'email': email,
         'password': password,
-        'dateOfBirth': dateOfBirth?.toUtc().toIso8601String(),
+        'dateOfBirth': dateOfBirth?.add(const Duration(hours: 7)).toIso8601String(),
       },
     );
     return response.data;
