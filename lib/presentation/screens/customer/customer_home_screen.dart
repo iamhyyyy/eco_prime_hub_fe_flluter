@@ -36,12 +36,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+    return BlocProvider(
+      create: (_) => BookingHistoryCubit()..load(_userId),
+      child: Builder(
+        builder: (ctx) => Scaffold(
+          backgroundColor: const Color(0xFFF5F7FA),
+          body: IndexedStack(index: _selectedIndex, children: _pages),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (i) {
+              if (i == 1) {
+                // Làm mới danh sách khi bấm vào tab Lịch sử
+                ctx.read<BookingHistoryCubit>().load(_userId);
+              }
+              setState(() => _selectedIndex = i);
+            },
         backgroundColor: Colors.white,
         elevation: 8,
         indicatorColor: const Color(0xFF0D47A1).withValues(alpha: 0.12),
@@ -52,18 +61,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Hồ sơ'),
         ],
       ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFF0D47A1),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Đặt lịch'),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => BookingScreen(customerId: _userId)),
-              ).then((_) => setState(() {})),
-            )
-          : null,
+            floatingActionButton: _selectedIndex == 0
+                ? FloatingActionButton.extended(
+                    backgroundColor: const Color(0xFF0D47A1),
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Đặt lịch'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => BookingScreen(customerId: _userId)),
+                    ).then((isSuccess) {
+                      if (isSuccess == true) {
+                        ctx.read<BookingHistoryCubit>().load(_userId);
+                      }
+                      setState(() {});
+                    }),
+                  )
+                : null,
+          ),
+      ),
     );
   }
 }
@@ -170,7 +186,11 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              _quickAction(Icons.add_circle_rounded, 'Đặt lịch', const Color(0xFF0D47A1), () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookingScreen(customerId: widget.userId)))),
+                              _quickAction(Icons.add_circle_rounded, 'Đặt lịch', const Color(0xFF0D47A1), () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookingScreen(customerId: widget.userId))).then((isSuccess) {
+                                if (isSuccess == true) {
+                                  context.read<BookingHistoryCubit>().load(widget.userId);
+                                }
+                              })),
                               const SizedBox(width: 12),
                               _quickAction(Icons.directions_car_rounded, 'Thêm xe', const Color(0xFF00838F), () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehiclesScreen(customerId: widget.userId)))),
                               const SizedBox(width: 12),

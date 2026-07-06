@@ -15,18 +15,20 @@ class AuthRepository {
 
   /// Đăng ký tài khoản mới
   Future<Map<String, dynamic>> register({
-    required String fullName,
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
-    String? phoneNumber,
+    DateTime? dateOfBirth,
   }) async {
     final response = await _apiClient.dio.post(
       '/auth/register',
       data: {
-        'fullName': fullName,
+        'firstName': firstName,
+        'lastName': lastName,
         'email': email,
         'password': password,
-        if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        'dateOfBirth': dateOfBirth?.toUtc().toIso8601String(),
       },
     );
     return response.data;

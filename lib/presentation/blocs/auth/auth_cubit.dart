@@ -64,18 +64,20 @@ class AuthCubit extends Cubit<AuthState> {
 
   /// Đăng ký
   Future<void> register({
-    required String fullName,
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
-    String? phoneNumber,
+    DateTime? dateOfBirth,
   }) async {
     emit(AuthLoading());
     try {
       await _repo.register(
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         password: password,
-        phoneNumber: phoneNumber,
+        dateOfBirth: dateOfBirth,
       );
       emit(RegisterSuccess());
     } on DioException catch (e) {

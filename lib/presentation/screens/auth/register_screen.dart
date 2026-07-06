@@ -11,19 +11,20 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  DateTime? _dateOfBirth;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -111,8 +112,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
-                            _buildField(_nameController, 'Họ và tên', Icons.person_outline,
-                                validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập họ tên' : null),
+                            _buildField(_firstNameController, 'Tên (First Name)', Icons.person_outline,
+                                validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên' : null),
+                            const SizedBox(height: 14),
+                            _buildField(_lastNameController, 'Họ (Last Name)', Icons.person_outline,
+                                validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập họ' : null),
                             const SizedBox(height: 14),
                             _buildField(_emailController, 'Email', Icons.email_outlined,
                                 type: TextInputType.emailAddress,
@@ -122,8 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   return null;
                                 }),
                             const SizedBox(height: 14),
-                            _buildField(_phoneController, 'Số điện thoại (tuỳ chọn)', Icons.phone_outlined,
-                                type: TextInputType.phone),
+                            _buildDatePicker(),
                             const SizedBox(height: 14),
                             _buildField(
                               _passwordController, 'Mật khẩu', Icons.lock_outline,
@@ -163,12 +166,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         : () {
                                             if (_formKey.currentState!.validate()) {
                                               ctx.read<AuthCubit>().register(
-                                                    fullName: _nameController.text.trim(),
+                                                    firstName: _firstNameController.text.trim(),
+                                                    lastName: _lastNameController.text.trim(),
                                                     email: _emailController.text.trim(),
                                                     password: _passwordController.text,
-                                                    phoneNumber: _phoneController.text.isEmpty
-                                                        ? null
-                                                        : _phoneController.text.trim(),
+                                                    dateOfBirth: _dateOfBirth,
                                                   );
                                             }
                                           },
@@ -230,6 +232,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0D47A1), width: 1.5)),
         errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE53935))),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return InkWell(
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+        );
+        if (date != null) setState(() => _dateOfBirth = date);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0E4ED)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cake_outlined, color: Color(0xFF0D47A1)),
+            const SizedBox(width: 12),
+            Text(
+              _dateOfBirth == null
+                  ? 'Ngày sinh (tuỳ chọn)'
+                  : '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
+              style: TextStyle(
+                color: _dateOfBirth == null ? Colors.grey.shade600 : Colors.black87,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

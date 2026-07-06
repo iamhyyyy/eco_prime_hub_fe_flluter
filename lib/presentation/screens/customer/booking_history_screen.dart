@@ -42,10 +42,7 @@ class BookingHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => BookingHistoryCubit()..load(customerId),
-      child: _HistoryView(customerId: customerId),
-    );
+    return _HistoryView(customerId: customerId);
   }
 }
 
