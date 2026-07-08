@@ -20,12 +20,13 @@ class UserRepository {
     return UserDto.fromJson(res.data);
   }
 
-  Future<void> changePassword(String id, String oldPassword, String newPassword) async {
+  Future<void> changePassword(String id, String currentPassword, String newPassword) async {
     await _apiClient.dio.put('/users/$id/change-password', data: {
-      'oldPassword': oldPassword,
+      'currentPassword': currentPassword,
       'newPassword': newPassword,
     });
   }
+
 
   Future<void> lockUser(String id) async {
     await _apiClient.dio.put('/users/$id/lock');

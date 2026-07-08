@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/tier_model.dart';
 import '../../../data/repositories/booking_repository.dart';
 import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/customer_profile_repository.dart';
 import '../../blocs/auth/auth_cubit.dart';
 import '../auth/login_screen.dart';
 
@@ -323,38 +325,415 @@ class _ManagerUsersPage extends StatelessWidget {
   }
 
   void _showUserDetailsDialog(BuildContext context, UserDto user) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Chi tiết người dùng'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ID: ${user.id}'),
-            const SizedBox(height: 8),
-            Text('Username: ${user.userName}'),
-            const SizedBox(height: 8),
-            Text('Họ và tên: ${user.fullName}'),
-            const SizedBox(height: 8),
-            Text('Email: ${user.email}'),
-            const SizedBox(height: 8),
-            Text('Số điện thoại: ${user.phoneNumber ?? "Trống"}'),
-            const SizedBox(height: 8),
-            Text('Ngày sinh: ${user.dateOfBirth != null ? "${user.dateOfBirth!.day}/${user.dateOfBirth!.month}/${user.dateOfBirth!.year}" : "Trống"}'),
-            const SizedBox(height: 8),
-            Text('Trạng thái: ${user.isActive ? "Đang hoạt động" : "Bị khoá"}'),
-            const SizedBox(height: 8),
-            Text('Vai trò: ${user.role ?? "N/A"}'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _UserDetailSheet(user: user),
     );
   }
 }
+
+// ─── User Detail Bottom Sheet ─────────────────────────────────────────────
+
+class _UserDetailSheet extends StatefulWidget {
+  final UserDto user;
+  const _UserDetailSheet({required this.user});
+  @override
+  State<_UserDetailSheet> createState() => _UserDetailSheetState();
+}
+
+class _UserDetailSheetState extends State<_UserDetailSheet> {
+  final _repo = CustomerProfileRepository();
+  Object? _ps;           // null=loading, false=notFound, CustomerProfileDto=found
+  List<TierDto> _tiers = [];
+  String? _selectedTierId;
+  bool _creating = false;
+  bool _savingTier = false;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    setState(() => _ps = null);
+    try {
+      // Fetch profile và tiers song song
+      final results = await Future.wait([
+        _repo.getProfileByCustomerId(widget.user.id),
+        _repo.getAllTiers(),
+      ]);
+      final p = results[0] as CustomerProfileDto;
+      final tiers = results[1] as List<TierDto>;
+
+      // Enrich tier name nếu API không trả về
+      CustomerProfileDto enriched = p;
+      if ((p.currentTierName == null || p.currentTierName!.isEmpty) &&
+          p.currentTierId.isNotEmpty) {
+        final matched = tiers.where((t) => t.id == p.currentTierId).firstOrNull;
+        if (matched != null) {
+          enriched = CustomerProfileDto(
+            id: p.id,
+            currentTierId: p.currentTierId,
+            currentTierName: matched.name,
+            currentTier: matched,
+            availablePoints: p.availablePoints,
+            lifetimePoints: p.lifetimePoints,
+            totalVisits: p.totalVisits,
+            totalSpending: p.totalSpending,
+            tierUpgradedAt: p.tierUpgradedAt,
+            lastTierReviewDate: p.lastTierReviewDate,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            updateBy: p.updateBy,
+          );
+        }
+      }
+      if (mounted) setState(() {
+        _ps = enriched;
+        _tiers = tiers;
+        _selectedTierId = enriched.currentTierId.isNotEmpty ? enriched.currentTierId : null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _ps = false);
+    }
+  }
+
+  Future<void> _create() async {
+    setState(() => _creating = true);
+    try {
+      await _repo.createProfile(widget.user.id);
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tạo profile thành công!'), backgroundColor: Colors.green));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tạo profile thất bại!'), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final u = widget.user;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.88, minChildSize: 0.5, maxChildSize: 0.95,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(children: [
+          // Handle
+          Container(margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF004D40), Color(0xFF00695C)],
+                begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: Text(u.firstName.isNotEmpty ? u.firstName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(u.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 2),
+                Text(u.email, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: u.isActive ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10)),
+                  child: Text(u.isActive ? '● Đang hoạt động' : '● Bị khoá',
+                    style: TextStyle(color: u.isActive ? Colors.greenAccent : Colors.redAccent,
+                      fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+              ])),
+              IconButton(icon: const Icon(Icons.close, color: Colors.white70),
+                onPressed: () => Navigator.pop(context)),
+            ]),
+          ),
+          // Body
+          Expanded(child: ListView(controller: ctrl, padding: const EdgeInsets.all(20), children: [
+            _secTitle('Thông tin tài khoản'),
+            const SizedBox(height: 8),
+            _card([
+              _row(Icons.badge_outlined, 'Username', u.userName),
+              _row(Icons.phone_outlined, 'Số điện thoại', u.phoneNumber ?? 'Trống'),
+              _row(Icons.cake_outlined, 'Ngày sinh',
+                u.dateOfBirth != null
+                  ? '${u.dateOfBirth!.day.toString().padLeft(2,'0')}/${u.dateOfBirth!.month.toString().padLeft(2,'0')}/${u.dateOfBirth!.year}'
+                  : 'Trống'),
+              _row(Icons.manage_accounts_outlined, 'Vai trò', u.role ?? 'N/A'),
+              _row(Icons.fingerprint, 'ID', u.id, small: true),
+            ]),
+            const SizedBox(height: 24),
+            Row(children: [
+              const Expanded(child: Divider()),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('Customer Profile',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w600))),
+              const Expanded(child: Divider()),
+            ]),
+            const SizedBox(height: 16),
+            _buildProfile(),
+          ])),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildProfile() {
+    if (_ps == null) {
+      return const Padding(padding: EdgeInsets.all(24),
+        child: Column(children: [
+          CircularProgressIndicator(color: Color(0xFF004D40)),
+          SizedBox(height: 12),
+          Text('Đang tải Customer Profile...', style: TextStyle(color: Colors.grey)),
+        ]));
+    }
+    if (_ps == false) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+        child: Column(children: [
+          Icon(Icons.card_membership_outlined, size: 52, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          const Text('Người dùng này chưa có Customer Profile',
+            textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 16),
+          SizedBox(width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF004D40), foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: _creating ? null : _create,
+              icon: _creating
+                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.add_card_rounded),
+              label: Text(_creating ? 'Đang tạo...' : 'Tạo Customer Profile'),
+            )),
+        ]));
+    }
+    final p = _ps as CustomerProfileDto;
+    final tc = _tierColor(p.tierDisplayName);
+    return Column(children: [
+      Container(padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [tc.withValues(alpha: 0.8), tc]),
+          borderRadius: BorderRadius.circular(16)),
+        child: Column(children: [
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Text(p.tierDisplayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ]),
+          const SizedBox(height: 12),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+            _pStat('${p.availablePoints}', 'Điểm hiện có', Icons.stars_rounded),
+            Container(width: 1, height: 36, color: Colors.white30),
+            _pStat('${p.lifetimePoints}', 'Điểm trọn đời', Icons.workspace_premium_rounded),
+            Container(width: 1, height: 36, color: Colors.white30),
+            _pStat('${p.totalVisits}', 'Lượt rửa', Icons.local_car_wash_rounded),
+          ]),
+        ])),
+      const SizedBox(height: 12),
+      _card([
+        _row(Icons.workspace_premium_rounded, 'Tier hiện tại', p.tierDisplayName),
+        _row(Icons.payments_outlined, 'Tổng chi tiêu', '${(p.totalSpending / 1000).toStringAsFixed(0)}K đ'),
+        if (p.tierUpgradedAt != null) _row(Icons.upgrade_rounded, 'Nâng tier lần cuối', _fmt(p.tierUpgradedAt!)),
+        if (p.createdAt != null) _row(Icons.calendar_today_outlined, 'Ngày tạo profile', _fmt(p.createdAt!)),
+      ]),
+      // ── Thay đổi Tier thủ công ──
+      if (_tiers.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF004D40).withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF004D40).withValues(alpha: 0.2)),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Row(children: [
+              Icon(Icons.upgrade_rounded, size: 16, color: Color(0xFF004D40)),
+              SizedBox(width: 6),
+              Text('Thay đổi Tier', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF004D40))),
+            ]),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _selectedTierId,
+              decoration: InputDecoration(
+                labelText: 'Chọn Tier mới',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                isDense: true,
+              ),
+              items: _tiers.map((t) => DropdownMenuItem(
+                value: t.id,
+                child: Row(children: [
+                  Text(t.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 8),
+                  Text('(≥${t.minPointsRequired} pts)', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ]),
+              )).toList(),
+              onChanged: (v) => setState(() => _selectedTierId = v),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF004D40), foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: (_savingTier || _selectedTierId == null || _selectedTierId == p.currentTierId)
+                  ? null : () => _saveTier(p),
+                icon: _savingTier
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.save_rounded, size: 18),
+                label: Text(_savingTier ? 'Đang lưu...' : 'Lưu Tier'),
+              )),
+          ]),
+        ),
+      ],
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.green,
+            side: const BorderSide(color: Colors.green), padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          onPressed: () => _pts(p, add: true),
+          icon: const Icon(Icons.add_circle_outline, size: 18), label: const Text('Cộng điểm'))),
+        const SizedBox(width: 10),
+        Expanded(child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.orange,
+            side: const BorderSide(color: Colors.orange), padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          onPressed: () => _pts(p, add: false),
+          icon: const Icon(Icons.remove_circle_outline, size: 18), label: const Text('Đổi điểm'))),
+      ]),
+    ]);
+  }
+
+  Future<void> _saveTier(CustomerProfileDto p) async {
+    if (_selectedTierId == null) return;
+    setState(() => _savingTier = true);
+    try {
+      await _repo.updateProfile(p.id, UpdateCustomerProfileDto(
+        currentTierId: _selectedTierId,
+        availablePoints: p.availablePoints,
+        lifetimePoints: p.lifetimePoints,
+        totalVisits: p.totalVisits,
+        totalSpending: p.totalSpending,
+      ));
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cập nhật Tier thành công!'), backgroundColor: Colors.green));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cập nhật Tier thất bại!'), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _savingTier = false);
+    }
+  }
+
+  void _pts(CustomerProfileDto p, {required bool add}) {
+    final pc = TextEditingController(), nc = TextEditingController();
+    showDialog(context: context, builder: (_) => AlertDialog(
+      title: Text(add ? 'Cộng điểm cho ${widget.user.fullName}' : 'Đổi điểm của ${widget.user.fullName}'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (!add) Padding(padding: const EdgeInsets.only(bottom: 8),
+          child: Text('Điểm hiện có: ${p.availablePoints}', style: const TextStyle(color: Colors.grey))),
+        TextField(controller: pc, keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: 'Số điểm *',
+            prefixIcon: const Icon(Icons.stars_rounded, color: Colors.amber),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+        const SizedBox(height: 12),
+        TextField(controller: nc, decoration: InputDecoration(labelText: 'Ghi chú (tuỳ chọn)',
+          prefixIcon: const Icon(Icons.note_outlined),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Huỷ')),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: add ? Colors.green : Colors.orange, foregroundColor: Colors.white),
+          onPressed: () async {
+            final pts = int.tryParse(pc.text);
+            if (pts == null || pts <= 0) return;
+            Navigator.pop(context);
+            try {
+              if (add) await _repo.addPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
+              else await _repo.redeemPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
+              await _load();
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(add ? 'Đã cộng $pts điểm!' : 'Đã đổi $pts điểm!'),
+                backgroundColor: add ? Colors.green : Colors.orange));
+            } catch (_) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Thao tác thất bại!'), backgroundColor: Colors.red));
+            }
+          },
+          child: Text(add ? 'Cộng điểm' : 'Đổi điểm')),
+      ],
+    ));
+  }
+
+  Widget _secTitle(String t) => Row(children: [
+    Container(width: 3, height: 16, decoration: BoxDecoration(color: const Color(0xFF004D40), borderRadius: BorderRadius.circular(2))),
+    const SizedBox(width: 8),
+    Text(t, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF004D40))),
+  ]);
+
+  Widget _card(List<Widget> rows) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.grey.shade200)),
+    child: Column(children: rows));
+
+  Widget _row(IconData icon, String label, String value, {bool small = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(children: [
+      Icon(icon, size: 16, color: const Color(0xFF004D40).withValues(alpha: 0.7)),
+      const SizedBox(width: 10),
+      SizedBox(width: 120, child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13))),
+      Expanded(child: Text(value,
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: small ? 11 : 13),
+        overflow: TextOverflow.ellipsis)),
+    ]));
+
+  Widget _pStat(String value, String label, IconData icon) => Column(children: [
+    Icon(icon, color: Colors.white70, size: 20),
+    const SizedBox(height: 4),
+    Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+    Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+  ]);
+
+  Color _tierColor(String tier) {
+    final t = tier.toLowerCase();
+    if (t.contains('gold') || t.contains('vang')) return const Color(0xFFF59E0B);
+    if (t.contains('silver') || t.contains('bac')) return const Color(0xFF64748B);
+    if (t.contains('platinum')) return const Color(0xFF7C3AED);
+    if (t.contains('diamond')) return const Color(0xFF06B6D4);
+    return const Color(0xFF004D40);
+  }
+
+  String _fmt(DateTime d) => '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';
+}
+
 
 class _ManagerBookingCard extends StatelessWidget {
   final BookingDto booking;

@@ -102,7 +102,7 @@ class _ProfileView extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                     child: Text(
-                      profile.currentTier?.name ?? 'Member',
+                      profile.tierDisplayName,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -118,11 +118,13 @@ class _ProfileView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  _statCard('Điểm tích lũy', '${profile.availablePoints}', Icons.stars_rounded, Colors.amber),
-                  const SizedBox(width: 12),
+                  _statCard('Điểm khả dụng', '${profile.availablePoints}', Icons.stars_rounded, Colors.amber),
+                  const SizedBox(width: 8),
+                  _statCard('Trọn đời', '${profile.lifetimePoints}', Icons.workspace_premium_rounded, Colors.deepOrange),
+                  const SizedBox(width: 8),
                   _statCard('Lượt rửa', '${profile.totalVisits}', Icons.local_car_wash_rounded, Colors.blue),
-                  const SizedBox(width: 12),
-                  _statCard('Tổng chi', '${_fmtK(profile.totalSpending)}K', Icons.payments_rounded, Colors.green),
+                  const SizedBox(width: 8),
+                  _statCard('Chi tiêu', '${_fmtK(profile.totalSpending)}K', Icons.payments_rounded, Colors.green),
                 ],
               ),
             ),
@@ -136,7 +138,11 @@ class _ProfileView extends StatelessWidget {
             children: [
               _infoTile(Icons.person, 'Họ tên', user.fullName),
               _infoTile(Icons.email, 'Email', user.email),
-              if (user.phoneNumber != null) _infoTile(Icons.phone, 'SĐT', user.phoneNumber!),
+              if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty)
+                _infoTile(Icons.phone, 'SĐT', user.phoneNumber!),
+              if (user.dateOfBirth != null)
+                _infoTile(Icons.cake_rounded, 'Ngày sinh',
+                  '${user.dateOfBirth!.day.toString().padLeft(2,'0')}/${user.dateOfBirth!.month.toString().padLeft(2,'0')}/${user.dateOfBirth!.year}'),
             ],
           ),
 
