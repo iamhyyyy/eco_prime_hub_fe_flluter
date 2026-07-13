@@ -376,7 +376,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                 u.dateOfBirth != null
                   ? '${u.dateOfBirth!.day.toString().padLeft(2,'0')}/${u.dateOfBirth!.month.toString().padLeft(2,'0')}/${u.dateOfBirth!.year}'
                   : 'Trống'),
-              _row(Icons.manage_accounts_outlined, 'Vai trò', u.role ?? 'N/A'),
+              _row(Icons.manage_accounts_outlined, 'Vai trò', u.roles.isNotEmpty ? u.roles.join(', ') : (u.role ?? 'N/A')),
               _row(Icons.fingerprint, 'ID', u.id, small: true),
             ]),
             const SizedBox(height: 24),

@@ -126,15 +126,17 @@ class _ManagerBookingsPageState extends State<ManagerBookingsPage> {
   }
 
   UserDto? _findUser(ManagerBookingLoaded state, String id) {
+    final normalizedId = id.toLowerCase();
     for (final u in state.users) {
-      if (u.id == id) return u;
+      if (u.id.toLowerCase() == normalizedId) return u;
     }
     return null;
   }
 
   VehicleDto? _findVehicle(ManagerBookingLoaded state, String id) {
+    final normalizedId = id.toLowerCase();
     for (final v in state.vehicles) {
-      if (v.id == id) return v;
+      if (v.id.toLowerCase() == normalizedId) return v;
     }
     return null;
   }

@@ -8,6 +8,7 @@ class UserDto {
   final DateTime? dateOfBirth;
   final bool isActive;
   final String? role;
+  final List<String> roles;
 
   UserDto({
     required this.id,
@@ -19,11 +20,23 @@ class UserDto {
     this.dateOfBirth,
     required this.isActive,
     this.role,
+    this.roles = const [],
   });
 
   String get fullName => '$firstName $lastName'.trim();
 
+  bool hasRole(String name) =>
+      roles.any((r) => r.toLowerCase() == name.toLowerCase()) ||
+      (role ?? '').toLowerCase() == name.toLowerCase();
+
+  bool get isCustomer => hasRole('customer');
+
   factory UserDto.fromJson(Map<String, dynamic> json) {
+    final roles = json['roles'] != null
+        ? List<String>.from(json['roles'].map((e) => e.toString()))
+        : <String>[];
+    final role = json['role']?.toString() ?? (roles.isNotEmpty ? roles.first : null);
+
     return UserDto(
       id: json['id']?.toString() ?? '',
       userName: json['userName'] ?? '',
@@ -33,7 +46,8 @@ class UserDto {
       phoneNumber: json['phoneNumber'],
       dateOfBirth: json['dateOfBirth'] != null ? DateTime.tryParse(json['dateOfBirth']) : null,
       isActive: json['isActive'] ?? true,
-      role: json['role'],
+      role: role,
+      roles: roles,
     );
   }
 

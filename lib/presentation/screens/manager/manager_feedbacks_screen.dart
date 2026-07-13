@@ -49,7 +49,7 @@ class ManagerFeedbackCubit extends Cubit<ManagerFeedbackState> {
       ]);
       final feedbacks = results[0] as List<FeedbackDto>;
       final customers = (results[1] as List<UserDto>)
-          .where((u) => (u.role ?? '').toLowerCase().contains('customer'))
+          .where((u) => u.isCustomer)
           .toList();
 
       feedbacks.sort((a, b) => b.createdAt.compareTo(a.createdAt));

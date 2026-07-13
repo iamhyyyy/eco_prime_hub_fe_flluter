@@ -49,7 +49,7 @@ class ManagerVehicleCubit extends Cubit<ManagerVehicleState> {
       ]);
       final vehicles = results[0] as List<VehicleDto>;
       final customers = (results[1] as List<UserDto>)
-          .where((u) => (u.role ?? '').toLowerCase().contains('customer'))
+          .where((u) => u.isCustomer)
           .toList()
         ..sort((a, b) => a.fullName.compareTo(b.fullName));
 
@@ -165,8 +165,9 @@ class _ManagerVehiclesPageState extends State<ManagerVehiclesPage> {
   }
 
   UserDto? _findCustomer(ManagerVehicleLoaded state, String customerId) {
+    final normalizedId = customerId.toLowerCase();
     for (final u in state.customers) {
-      if (u.id == customerId) return u;
+      if (u.id.toLowerCase() == normalizedId) return u;
     }
     return null;
   }
