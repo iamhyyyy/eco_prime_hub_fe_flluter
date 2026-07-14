@@ -1,9 +1,22 @@
 // ─── Enums ────────────────────────────────────────────────────────────────
 enum BookingStatus { pending, confirmed, inProgress, completed, cancelled, noShow }
-enum PaymentMethod { cash, card, eWallet }
-enum VehicleType { sedan, suv, motorcycle }
-enum PromoType { percentage, flat, pointsMultiplier, freeService }
-enum PointTransactionType { earned, redeemed, expired, refunded, adjusted }
+enum PaymentMethod { cash, transfer, points }
+
+extension PaymentMethodX on PaymentMethod {
+  String get label {
+    switch (this) {
+      case PaymentMethod.cash:
+        return 'Tiền mặt';
+      case PaymentMethod.transfer:
+        return 'Chuyển khoản';
+      case PaymentMethod.points:
+        return 'Điểm thưởng';
+    }
+  }
+}
+enum VehicleType { motorbike, scooter, other }
+enum PromoType { discount, freeWash, addon, pointBonus }
+enum PointTransactionType { earn, redeem, expire, bonus, adjustment }
 
 // ─── BookingDto ───────────────────────────────────────────────────────────
 class BookingDto {
@@ -84,5 +97,38 @@ class CreateBookingDto {
         'scheduledTime': scheduledTime.toUtc().toIso8601String(),
         'paymentMethod': paymentMethod.index,
         'staffNotes': staffNotes,
+      };
+}
+
+class UpdateBookingDto {
+  final String? promoId;
+  final DateTime scheduledTime;
+  final DateTime? checkinTime;
+  final DateTime? completedTime;
+  final BookingStatus status;
+  final PaymentMethod paymentMethod;
+  final String? cancelReason;
+  final String? staffNotes;
+
+  UpdateBookingDto({
+    this.promoId,
+    required this.scheduledTime,
+    this.checkinTime,
+    this.completedTime,
+    required this.status,
+    required this.paymentMethod,
+    this.cancelReason,
+    this.staffNotes,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'promoId': promoId,
+        'scheduledTime': scheduledTime.toUtc().toIso8601String(),
+        if (checkinTime != null) 'checkinTime': checkinTime!.toUtc().toIso8601String(),
+        if (completedTime != null) 'completedTime': completedTime!.toUtc().toIso8601String(),
+        'status': status.index,
+        'paymentMethod': paymentMethod.index,
+        if (cancelReason != null) 'cancelReason': cancelReason,
+        if (staffNotes != null) 'staffNotes': staffNotes,
       };
 }

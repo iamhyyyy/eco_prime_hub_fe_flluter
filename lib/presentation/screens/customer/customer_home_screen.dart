@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/wash_service_model.dart';
+import '../../../data/models/booking_model.dart';
 import '../../../data/repositories/wash_service_repository.dart';
 import '../../../data/repositories/customer_profile_repository.dart';
+import '../../../data/repositories/booking_repository.dart';
 import '../../../data/models/tier_model.dart';
 import '../../blocs/auth/auth_cubit.dart';
 import 'services_screen.dart';
@@ -28,9 +30,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   List<Widget> get _pages => [
-    _CustomerDashboard(userId: _userId),
+    _CustomerDashboard(
+      userId: _userId,
+      onOpenHistory: () => setState(() => _selectedIndex = 1),
+    ),
     BookingHistoryScreen(customerId: _userId),
-    ServicesScreen(),
+    ServicesScreen(customerId: _userId),
     ProfileScreen(userId: _userId),
   ];
 
@@ -87,7 +92,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 // ─── Dashboard Home Page ───────────────────────────────────────────────────
 class _CustomerDashboard extends StatefulWidget {
   final String userId;
-  const _CustomerDashboard({required this.userId});
+  final VoidCallback onOpenHistory;
+
+  const _CustomerDashboard({
+    required this.userId,
+    required this.onOpenHistory,
+  });
 
   @override
   State<_CustomerDashboard> createState() => _CustomerDashboardState();
@@ -95,6 +105,7 @@ class _CustomerDashboard extends StatefulWidget {
 
 class _CustomerDashboardState extends State<_CustomerDashboard> {
   List<WashServiceDto> _services = [];
+  List<BookingDto> _upcoming = [];
   CustomerProfileDto? _profile;
   bool _loading = true;
 
@@ -108,10 +119,28 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
     try {
       final services = await WashServiceRepository().getAllServices();
       CustomerProfileDto? profile;
+      List<BookingDto> upcoming = [];
       try {
         profile = await CustomerProfileRepository().getProfileByCustomerId(widget.userId);
       } catch (_) {}
-      if (mounted) setState(() { _services = services.where((s) => s.isActive).take(4).toList(); _profile = profile; _loading = false; });
+      try {
+        final bookings = await BookingRepository().getBookingsByCustomer(widget.userId);
+        upcoming = bookings
+            .where((b) =>
+                (b.status == BookingStatus.pending || b.status == BookingStatus.confirmed) &&
+                b.scheduledTime.isAfter(DateTime.now()))
+            .toList()
+          ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+        upcoming = upcoming.take(3).toList();
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _services = services.where((s) => s.isActive).take(4).toList();
+          _upcoming = upcoming;
+          _profile = profile;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -189,14 +218,22 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                               _quickAction(Icons.add_circle_rounded, 'Đặt lịch', const Color(0xFF0D47A1), () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookingScreen(customerId: widget.userId))).then((isSuccess) {
                                 if (isSuccess == true) {
                                   context.read<BookingHistoryCubit>().load(widget.userId);
+                                  _loadData();
                                 }
                               })),
                               const SizedBox(width: 12),
                               _quickAction(Icons.directions_car_rounded, 'Thêm xe', const Color(0xFF00838F), () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehiclesScreen(customerId: widget.userId)))),
                               const SizedBox(width: 12),
-                              _quickAction(Icons.history_rounded, 'Lịch sử', const Color(0xFF6A1B9A), () {}),
+                              _quickAction(Icons.history_rounded, 'Lịch sử', const Color(0xFF6A1B9A), widget.onOpenHistory),
                             ],
                           ),
+
+                          if (_upcoming.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            const Text('Lịch sắp tới', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 12),
+                            ..._upcoming.map((b) => _UpcomingBookingCard(booking: b)),
+                          ],
 
                           // Services
                           const SizedBox(height: 24),
@@ -209,7 +246,24 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _services.length,
-                              itemBuilder: (_, i) => _MiniServiceCard(service: _services[i]),
+                              itemBuilder: (_, i) => _MiniServiceCard(
+                                service: _services[i],
+                                onBook: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BookingScreen(
+                                      customerId: widget.userId,
+                                      initialServiceId: _services[i].id,
+                                    ),
+                                  ),
+                                ).then((isSuccess) {
+                                  if (!context.mounted) return;
+                                  if (isSuccess == true) {
+                                    context.read<BookingHistoryCubit>().load(widget.userId);
+                                    _loadData();
+                                  }
+                                }),
+                              ),
                             ),
                         ],
                       ),
@@ -264,7 +318,9 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
 
 class _MiniServiceCard extends StatelessWidget {
   final WashServiceDto service;
-  const _MiniServiceCard({required this.service});
+  final VoidCallback? onBook;
+
+  const _MiniServiceCard({required this.service, this.onBook});
 
   @override
   Widget build(BuildContext context) {
@@ -290,9 +346,27 @@ class _MiniServiceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            '${_fmt(service.basePrice)}đ',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${_fmt(service.basePrice)}đ',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+              ),
+              if (onBook != null) ...[
+                const SizedBox(height: 4),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: const Color(0xFF0D47A1),
+                  ),
+                  onPressed: onBook,
+                  child: const Text('Đặt ngay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -307,5 +381,52 @@ class _MiniServiceCard extends StatelessWidget {
       buffer.write(str[i]);
     }
     return buffer.toString();
+  }
+}
+
+class _UpcomingBookingCard extends StatelessWidget {
+  final BookingDto booking;
+  const _UpcomingBookingCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = booking.status == BookingStatus.confirmed ? 'Đã xác nhận' : 'Chờ xác nhận';
+    final statusColor = booking.status == BookingStatus.confirmed ? Colors.blue : Colors.orange;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D47A1).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.event_available_rounded, color: Color(0xFF0D47A1)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${booking.scheduledTime.day}/${booking.scheduledTime.month}/${booking.scheduledTime.year}  ${booking.scheduledTime.hour.toString().padLeft(2, '0')}:${booking.scheduledTime.minute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
