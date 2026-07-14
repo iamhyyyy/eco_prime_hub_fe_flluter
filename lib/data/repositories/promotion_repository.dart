@@ -15,8 +15,15 @@ class PromotionRepository {
     return PromotionDto.fromJson(res.data);
   }
 
+// Hàm create đang bị lỗi 405, hãy thử cách này:
   Future<void> createPromotion(Map<String, dynamic> data) async {
-    await _apiClient.dio.post('/promotion', data: data);
+    try {
+      // ĐỪNG thêm /api vào nữa, giữ nguyên '/promotion'
+      // NHƯNG hãy thử đổi từ .post sang .put (nếu server yêu cầu PUT)
+      await _apiClient.dio.post('/promotion', data: data);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> updatePromotion(String id, Map<String, dynamic> data) async {

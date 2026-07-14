@@ -7,6 +7,7 @@ import '../../../data/repositories/booking_repository.dart';
 import '../../blocs/auth/auth_cubit.dart';
 import '../auth/login_screen.dart';
 import 'manage_services/ManageServicesScreen.dart';
+import 'promotion_services/ManagePromotionsScreen.dart';
 
 // Import các màn hình quản lý (Hãy đảm bảo đường dẫn này khớp với project của bạn)
 
@@ -172,9 +173,9 @@ class _DashboardPage extends StatelessWidget {
               _ActionCard('Dịch vụ', Icons.local_car_wash, Colors.blue, () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageServicesScreen()));
               }),
-              // _ActionCard('Khuyến mãi', Icons.discount, Colors.purple, () {
-              //   Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagePromotionsScreen()));
-              // }),
+              _ActionCard('Khuyến mãi', Icons.discount, Colors.purple, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagePromotionsScreen()));
+              }),
               _ActionCard('Hạng thành viên', Icons.workspace_premium, Colors.orange, () {
                 // Tạm thời hiển thị thông báo, thay bằng Navigator khi code xong file
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng đang phát triển')));
