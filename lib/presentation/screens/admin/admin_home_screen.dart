@@ -6,6 +6,12 @@ import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/booking_repository.dart';
 import '../../blocs/auth/auth_cubit.dart';
 import '../auth/login_screen.dart';
+import 'manage_services/ManageServicesScreen.dart';
+
+// Import các màn hình quản lý (Hãy đảm bảo đường dẫn này khớp với project của bạn)
+
+// import 'manage_tiers/manage_tiers_screen.dart'; // Mở comment khi bạn tạo xong file này
+// import 'manage_pointlogs/manage_pointlogs_screen.dart'; // Mở comment khi bạn tạo xong file này
 
 // ─── Cubit ────────────────────────────────────────────────────────────────
 abstract class AdminState {}
@@ -124,9 +130,9 @@ class _DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final todayBookings = bookings.where((b) =>
-      b.scheduledTime.day == today.day &&
-      b.scheduledTime.month == today.month &&
-      b.scheduledTime.year == today.year).toList();
+    b.scheduledTime.day == today.day &&
+        b.scheduledTime.month == today.month &&
+        b.scheduledTime.year == today.year).toList();
     final revenue = bookings.where((b) => b.status == BookingStatus.completed).fold(0.0, (sum, b) => sum + b.finalAmount);
 
     return SingleChildScrollView(
@@ -150,7 +156,41 @@ class _DashboardPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+
+          const SizedBox(height: 24),
+          const Text('Công cụ quản lý', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
+          // ─── CÁC NÚT ĐIỀU HƯỚNG TASK CỦA BẠN NẰM Ở ĐÂY ───
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.2, // Tỷ lệ này giúp nút bấm dẹp hơn, nhìn giống nút menu
+            children: [
+              _ActionCard('Dịch vụ', Icons.local_car_wash, Colors.blue, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageServicesScreen()));
+              }),
+              // _ActionCard('Khuyến mãi', Icons.discount, Colors.purple, () {
+              //   Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagePromotionsScreen()));
+              // }),
+              _ActionCard('Hạng thành viên', Icons.workspace_premium, Colors.orange, () {
+                // Tạm thời hiển thị thông báo, thay bằng Navigator khi code xong file
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng đang phát triển')));
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageTiersScreen()));
+              }),
+              _ActionCard('Điểm thưởng', Icons.stars, Colors.green, () {
+                // Tạm thời hiển thị thông báo
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng đang phát triển')));
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagePointLogScreen()));
+              }),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+          const Text('Thống kê nhanh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -165,7 +205,8 @@ class _DashboardPage extends StatelessWidget {
               _StatCard('Doanh thu', '${_fmtM(revenue)}M', Icons.attach_money_rounded, const Color(0xFFE65100)),
             ],
           ),
-          const SizedBox(height: 20),
+
+          const SizedBox(height: 24),
           const Text('Booking gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           ...bookings.take(5).map((b) => _MiniBookingRow(b)),
@@ -175,6 +216,47 @@ class _DashboardPage extends StatelessWidget {
   }
 
   String _fmtM(double val) => (val / 1_000_000).toStringAsFixed(1);
+}
+
+// Widget mới dùng cho các nút quản lý (Có chức năng ấn được - InkWell)
+class _ActionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _ActionCard(this.title, this.icon, this.color, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade800, fontSize: 13),
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _StatCard extends StatelessWidget {
