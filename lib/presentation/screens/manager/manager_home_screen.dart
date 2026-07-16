@@ -302,11 +302,13 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
           );
         }
       }
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _ps = enriched;
         _tiers = tiers;
         _selectedTierId = enriched.currentTierId.isNotEmpty ? enriched.currentTierId : null;
       });
+      }
     } catch (_) {
       if (mounted) setState(() => _ps = false);
     }
@@ -317,11 +319,15 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
     try {
       await _repo.createProfile(widget.user.id);
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tạo profile thành công!'), backgroundColor: Colors.green));
+      }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tạo profile thất bại!'), backgroundColor: Colors.red));
+      }
     } finally {
       if (mounted) setState(() => _creating = false);
     }
@@ -488,7 +494,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
             ]),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _selectedTierId,
+              initialValue: _selectedTierId,
               decoration: InputDecoration(
                 labelText: 'Chọn Tier mới',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -554,11 +560,15 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
         totalSpending: p.totalSpending,
       ));
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cập nhật Tier thành công!'), backgroundColor: Colors.green));
+      }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cập nhật Tier thất bại!'), backgroundColor: Colors.red));
+      }
     } finally {
       if (mounted) setState(() => _savingTier = false);
     }
@@ -590,15 +600,22 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
             if (pts == null || pts <= 0) return;
             Navigator.pop(context);
             try {
-              if (add) await _repo.addPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
-              else await _repo.redeemPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
+              if (add) {
+                await _repo.addPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
+              } else {
+                await _repo.redeemPoints(p.id, pts, note: nc.text.isEmpty ? null : nc.text);
+              }
               await _load();
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(add ? 'Đã cộng $pts điểm!' : 'Đã đổi $pts điểm!'),
                 backgroundColor: add ? Colors.green : Colors.orange));
+              }
             } catch (_) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text('Thao tác thất bại!'), backgroundColor: Colors.red));
+              }
             }
           },
           child: Text(add ? 'Cộng điểm' : 'Đổi điểm')),
