@@ -10,6 +10,11 @@ class AuthRepository {
       '/auth/login',
       data: LoginRequest(email: email, password: password).toJson(),
     );
+    // DEBUG: In ra response thô để kiểm tra cấu trúc JSON
+    // ignore: avoid_print
+    print('[AUTH] Raw response status: ${response.statusCode}');
+    // ignore: avoid_print
+    print('[AUTH] Raw response data: ${response.data}');
     return LoginResponse.fromJson(response.data);
   }
 

@@ -94,7 +94,8 @@ class PointLogDto {
     return PointLogDto(
       id: json['id']?.toString() ?? '',
       customerId: json['customerId']?.toString() ?? '',
-      points: json['points'] ?? 0,
+      // Backend trả về 'pointsChanged', không phải 'points'
+      points: json['pointsChanged'] ?? json['points'] ?? 0,
       transactionType: PointTransactionType.values[json['transactionType'] ?? 0],
       note: json['note'],
       bookingId: json['bookingId']?.toString(),

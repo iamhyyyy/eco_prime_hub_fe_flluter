@@ -6,6 +6,9 @@ import '../../../data/repositories/customer_profile_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../blocs/auth/auth_cubit.dart';
 import '../auth/login_screen.dart';
+import '../../../data/models/booking_model.dart';
+import '../../../data/models/feedback_model.dart';
+import '../../../data/repositories/feedback_repository.dart';
 
 // ─── Cubit ────────────────────────────────────────────────────────────────
 abstract class ProfileState {}
@@ -157,6 +160,8 @@ class _ProfileView extends StatelessWidget {
                 const SizedBox(height: 8),
                 _actionTile(Icons.lock_outline, 'Đổi mật khẩu', () => _showChangePassword(ctx, userId)),
                 const SizedBox(height: 8),
+                _actionTile(Icons.history_edu_rounded, 'Lịch sử điểm thưởng', () => _showPointLog(ctx, userId)),
+                const SizedBox(height: 8),
                 _actionTile(Icons.logout_rounded, 'Đăng xuất', () async {
                   await ctx.read<AuthCubit>().logout();
                   if (ctx.mounted) {
@@ -290,6 +295,15 @@ class _ProfileView extends StatelessWidget {
   }
 
   String _fmtK(double val) => (val / 1000).toStringAsFixed(0);
+
+  void _showPointLog(BuildContext ctx, String userId) {
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PointLogSheet(customerId: userId),
+    );
+  }
 }
 
 class _UpdateProfileSheet extends StatefulWidget {
@@ -405,4 +419,226 @@ class _UpdateProfileSheetState extends State<_UpdateProfileSheet> {
       ),
     );
   }
+}
+
+// ─── PointLog Bottom Sheet (Customer) ────────────────────────────────────────
+
+class _PointLogSheet extends StatefulWidget {
+  final String customerId;
+  const _PointLogSheet({required this.customerId});
+  @override
+  State<_PointLogSheet> createState() => _PointLogSheetState();
+}
+
+class _PointLogSheetState extends State<_PointLogSheet> {
+  final _repo = FeedbackRepository();
+  List<PointLogDto>? _logs;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final logs = await _repo.getPointLogs(widget.customerId);
+      logs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (mounted) setState(() { _logs = logs; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _error = 'Không tải được lịch sử điểm'; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0D47A1), Color(0xFF00838F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_edu_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text('Lịch sử điểm thưởng',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                  ),
+                  if (_logs != null) ..._buildSummaryBadges(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody(ctrl)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildSummaryBadges() {
+    final earned = _logs!.where((l) =>
+      l.transactionType == PointTransactionType.earn ||
+      l.transactionType == PointTransactionType.bonus).fold(0, (s, l) => s + l.points);
+    final redeemed = _logs!.where((l) =>
+      l.transactionType == PointTransactionType.redeem).fold(0, (s, l) => s + l.points);
+    return [
+      _badge('+$earned', Colors.greenAccent),
+      const SizedBox(width: 6),
+      _badge('-$redeemed', Colors.orangeAccent),
+      const SizedBox(width: 4),
+    ];
+  }
+
+  Widget _badge(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+  );
+
+  Widget _buildBody(ScrollController ctrl) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0D47A1)));
+    if (_error != null) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+        const SizedBox(height: 12),
+        Text(_error!, style: const TextStyle(color: Colors.grey)),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D47A1), foregroundColor: Colors.white),
+          onPressed: _load,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Thử lại'),
+        ),
+      ]));
+    }
+    if (_logs!.isEmpty) {
+      return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.stars_outlined, size: 64, color: Colors.grey),
+        SizedBox(height: 12),
+        Text('Chưa có giao dịch điểm nào', style: TextStyle(color: Colors.grey, fontSize: 15)),
+      ]));
+    }
+    return RefreshIndicator(
+      color: const Color(0xFF0D47A1),
+      onRefresh: _load,
+      child: ListView.builder(
+        controller: ctrl,
+        padding: const EdgeInsets.all(16),
+        itemCount: _logs!.length,
+        itemBuilder: (_, i) => _PointLogTile(log: _logs![i]),
+      ),
+    );
+  }
+}
+
+class _PointLogTile extends StatelessWidget {
+  final PointLogDto log;
+  const _PointLogTile({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = log.transactionType == PointTransactionType.earn ||
+                       log.transactionType == PointTransactionType.bonus;
+    final isNegative = log.transactionType == PointTransactionType.redeem ||
+                       log.transactionType == PointTransactionType.expire;
+    final color = isPositive ? Colors.green : (isNegative ? Colors.orange : Colors.grey);
+    final sign  = isPositive ? '+' : '-';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(_icon(log.transactionType), color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_label(log.transactionType),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                if (log.note != null && log.note!.isNotEmpty)
+                  Text(log.note!,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(_fmtDate(log.createdAt),
+                  style: const TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
+            ),
+          ),
+          Text('$sign${log.points}',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
+          Text(' pts', style: TextStyle(fontSize: 11, color: color)),
+        ],
+      ),
+    );
+  }
+
+  IconData _icon(PointTransactionType t) {
+    switch (t) {
+      case PointTransactionType.earn:       return Icons.add_circle_rounded;
+      case PointTransactionType.redeem:     return Icons.remove_circle_rounded;
+      case PointTransactionType.expire:     return Icons.timer_off_rounded;
+      case PointTransactionType.bonus:      return Icons.star_rounded;
+      case PointTransactionType.adjustment: return Icons.tune_rounded;
+    }
+  }
+
+  String _label(PointTransactionType t) {
+    switch (t) {
+      case PointTransactionType.earn:       return 'Tích điểm';
+      case PointTransactionType.redeem:     return 'Đổi điểm';
+      case PointTransactionType.expire:     return 'Điểm hết hạn';
+      case PointTransactionType.bonus:      return 'Điểm thưởng';
+      case PointTransactionType.adjustment: return 'Điều chỉnh';
+    }
+  }
+
+  String _fmtDate(DateTime d) =>
+    '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}  '
+    '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
 }

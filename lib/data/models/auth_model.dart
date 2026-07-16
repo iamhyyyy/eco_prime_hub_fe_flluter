@@ -23,10 +23,13 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    // ignore: avoid_print
+    print('[AUTH] Parsing JSON: $json');
     return LoginResponse(
-      isSuccess: json['isSuccess'] ?? false,
-      token: json['token'],
-      message: json['message'],
+      // Hỗ trợ nhiều key có thể từ backend .NET
+      isSuccess: json['isSuccess'] ?? json['IsSuccess'] ?? json['success'] ?? false,
+      token: json['token'] ?? json['Token'] ?? json['accessToken'],
+      message: json['message'] ?? json['Message'],
     );
   }
 }

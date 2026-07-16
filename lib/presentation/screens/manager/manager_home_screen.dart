@@ -9,6 +9,9 @@ import '../auth/login_screen.dart';
 import 'manager_vehicles_screen.dart';
 import 'manager_feedbacks_screen.dart';
 import 'manager_bookings_screen.dart';
+import '../../../data/models/booking_model.dart';
+import '../../../data/models/feedback_model.dart';
+import '../../../data/repositories/feedback_repository.dart';
 
 // ─── Cubits ───────────────────────────────────────────────────────────────
 
@@ -545,6 +548,21 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
           onPressed: () => _pts(p, add: false),
           icon: const Icon(Icons.remove_circle_outline, size: 18), label: const Text('Đổi điểm'))),
       ]),
+      const SizedBox(height: 10),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF004D40),
+            side: const BorderSide(color: Color(0xFF004D40)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: () => _showPointLog(p),
+          icon: const Icon(Icons.history_edu_rounded, size: 18),
+          label: const Text('Lịch sử điểm thưởng'),
+        ),
+      ),
     ]);
   }
 
@@ -621,6 +639,18 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
           child: Text(add ? 'Cộng điểm' : 'Đổi điểm')),
       ],
     ));
+  }
+
+  void _showPointLog(CustomerProfileDto p) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ManagerPointLogSheet(
+        customerId: widget.user.id,
+        customerName: widget.user.fullName,
+      ),
+    );
   }
 
   Widget _secTitle(String t) => Row(children: [
@@ -738,3 +768,206 @@ class _AddUserDialogState extends State<_AddUserDialog> {
   }
 }
 
+
+// ─── Manager PointLog Sheet ───────────────────────────────────────────────
+
+class _ManagerPointLogSheet extends StatefulWidget {
+  final String customerId;
+  final String customerName;
+  const _ManagerPointLogSheet({required this.customerId, required this.customerName});
+  @override
+  State<_ManagerPointLogSheet> createState() => _ManagerPointLogSheetState();
+}
+
+class _ManagerPointLogSheetState extends State<_ManagerPointLogSheet> {
+  final _repo = FeedbackRepository();
+  List<PointLogDto>? _logs;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final logs = await _repo.getPointLogs(widget.customerId);
+      logs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (mounted) setState(() { _logs = logs; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _error = 'Không tải được lịch sử điểm'; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF004D40), Color(0xFF00695C)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_edu_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Lịch sử điểm thưởng',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                        Text(widget.customerName,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  if (_logs != null) ..._summaryBadges(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody(ctrl)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _summaryBadges() {
+    final earned   = _logs!.where((l) => l.transactionType == PointTransactionType.earn || l.transactionType == PointTransactionType.bonus).fold(0, (s, l) => s + l.points);
+    final redeemed = _logs!.where((l) => l.transactionType == PointTransactionType.redeem).fold(0, (s, l) => s + l.points);
+    Widget badge(String t, Color c) => Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+      child: Text(t, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.bold)),
+    );
+    return [badge('+$earned', Colors.greenAccent), badge('-$redeemed', Colors.orangeAccent)];
+  }
+
+  Widget _buildBody(ScrollController ctrl) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: Color(0xFF004D40)));
+    if (_error != null) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+      const SizedBox(height: 12),
+      Text(_error!, style: const TextStyle(color: Colors.grey)),
+      const SizedBox(height: 12),
+      ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF004D40), foregroundColor: Colors.white),
+        onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Thử lại')),
+    ]));
+    if (_logs!.isEmpty) return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(Icons.stars_outlined, size: 64, color: Colors.grey),
+      SizedBox(height: 12),
+      Text('Chưa có giao dịch điểm nào', style: TextStyle(color: Colors.grey, fontSize: 15)),
+    ]));
+    return RefreshIndicator(
+      color: const Color(0xFF004D40),
+      onRefresh: _load,
+      child: ListView.builder(
+        controller: ctrl,
+        padding: const EdgeInsets.all(16),
+        itemCount: _logs!.length,
+        itemBuilder: (_, i) => _MgrPointLogTile(log: _logs![i]),
+      ),
+    );
+  }
+}
+
+class _MgrPointLogTile extends StatelessWidget {
+  final PointLogDto log;
+  const _MgrPointLogTile({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPos  = log.transactionType == PointTransactionType.earn || log.transactionType == PointTransactionType.bonus;
+    final isNeg  = log.transactionType == PointTransactionType.redeem || log.transactionType == PointTransactionType.expire;
+    final color  = isPos ? Colors.green : (isNeg ? Colors.orange : Colors.grey);
+    final sign   = isPos ? '+' : '-';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+            child: Icon(_icon(log.transactionType), color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_label(log.transactionType), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                if (log.note != null && log.note!.isNotEmpty)
+                  Text(log.note!, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(_fmtDate(log.createdAt), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$sign${log.points}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
+              Text('pts', style: TextStyle(fontSize: 11, color: color)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _icon(PointTransactionType t) {
+    switch (t) {
+      case PointTransactionType.earn:       return Icons.add_circle_rounded;
+      case PointTransactionType.redeem:     return Icons.remove_circle_rounded;
+      case PointTransactionType.expire:     return Icons.timer_off_rounded;
+      case PointTransactionType.bonus:      return Icons.star_rounded;
+      case PointTransactionType.adjustment: return Icons.tune_rounded;
+    }
+  }
+
+  String _label(PointTransactionType t) {
+    switch (t) {
+      case PointTransactionType.earn:       return 'Tích điểm';
+      case PointTransactionType.redeem:     return 'Đổi điểm';
+      case PointTransactionType.expire:     return 'Điểm hết hạn';
+      case PointTransactionType.bonus:      return 'Điểm thưởng';
+      case PointTransactionType.adjustment: return 'Điều chỉnh';
+    }
+  }
+
+  String _fmtDate(DateTime d) =>
+    '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}  '
+    '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+}

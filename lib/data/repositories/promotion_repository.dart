@@ -18,8 +18,7 @@ class PromotionRepository {
 // Hàm create đang bị lỗi 405, hãy thử cách này:
   Future<void> createPromotion(Map<String, dynamic> data) async {
     try {
-      // ĐỪNG thêm /api vào nữa, giữ nguyên '/promotion'
-      // NHƯNG hãy thử đổi từ .post sang .put (nếu server yêu cầu PUT)
+      // Đổi lại thành /promotion, in ra status code để dễ debug
       await _apiClient.dio.post('/promotion', data: data);
     } catch (e) {
       rethrow;

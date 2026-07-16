@@ -55,10 +55,37 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthFailure(response.message ?? 'Đăng nhập thất bại'));
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Lỗi kết nối server!';
+      // ignore: avoid_print
+      print('[AUTH] DioException TYPE: ${e.type}');
+      // ignore: avoid_print
+      print('[AUTH] DioException MESSAGE: ${e.message}');
+      // ignore: avoid_print
+      print('[AUTH] DioException ERROR: ${e.error}');
+      // ignore: avoid_print
+      print('[AUTH] DioException STATUS: ${e.response?.statusCode}');
+      // ignore: avoid_print
+      print('[AUTH] DioException DATA: ${e.response?.data}');
+
+      String msg;
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.unknown) {
+        msg = 'Không thể kết nối server. Kiểm tra internet hoặc server đang tắt!';
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        msg = 'Server phản hồi quá chậm, vui lòng thử lại!';
+      } else if (e.type == DioExceptionType.badCertificate) {
+        msg = 'Lỗi SSL/Certificate!';
+      } else {
+        msg = e.response?.data?['message']
+            ?? e.response?.data?['Message']
+            ?? 'Lỗi kết nối! (${e.response?.statusCode})';
+      }
       emit(AuthFailure(msg));
-    } catch (_) {
-      emit(AuthFailure('Đã có lỗi xảy ra, vui lòng thử lại!'));
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[AUTH] Unknown error: $e\n$st');
+      emit(AuthFailure('Lỗi: $e'));
     }
   }
 

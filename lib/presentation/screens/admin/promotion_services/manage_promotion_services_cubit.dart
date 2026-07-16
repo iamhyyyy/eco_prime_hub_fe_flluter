@@ -1,14 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../data/models/promotion_model.dart';
+import '../../../../data/models/tier_model.dart';
 import '../../../../data/repositories/promotion_repository.dart';
-import '../../../../data/services/user_session.dart';
+import '../../../../data/repositories/customer_profile_repository.dart';
+import '../../../../core/utils/jwt_helper.dart'; // Dùng AuthSession thay vì UserSession
 
 abstract class ManagePromotionState {}
 class MPromotionLoading extends ManagePromotionState {}
 class MPromotionLoaded extends ManagePromotionState {
   final List<PromotionDto> promotions;
-  MPromotionLoaded(this.promotions);
+  final List<TierDto> tiers;
+  MPromotionLoaded(this.promotions, this.tiers);
 }
 class MPromotionError extends ManagePromotionState {
   final String message;
@@ -24,7 +27,8 @@ class ManagePromotionCubit extends Cubit<ManagePromotionState> {
     emit(MPromotionLoading());
     try {
       final list = await _repo.getAllPromotions();
-      emit(MPromotionLoaded(list));
+      final tiers = await CustomerProfileRepository().getAllTiers();
+      emit(MPromotionLoaded(list, tiers));
     } catch (e) {
       emit(MPromotionError("Lỗi tải dữ liệu: $e"));
     }
@@ -35,19 +39,31 @@ class ManagePromotionCubit extends Cubit<ManagePromotionState> {
   }
 
   Future<void> addPromotion(PromotionDto dto) async {
-    final userId = await UserSession.getUserId();
+    // Dùng AuthSession (FlutterSecureStorage) — cùng storage với login
+    final userId = await AuthSession.getUserId();
 
-    // Lấy dữ liệu để gửi lên (Loại bỏ ID vì backend không cần)
     final Map<String, dynamic> data = dto.toJson();
-    data.remove("id"); // Loại bỏ ID vì backend dùng CreatePromotionDto
+    data.remove('id');
     data['createdBy'] = userId;
 
-    await _repo.createPromotion(data);
-    load();
+    // ignore: avoid_print
+    print('[PROMOTION] Sending create payload: $data');
+    try {
+      await _repo.createPromotion(data);
+      load();
+    } on DioException catch (e) {
+      // ignore: avoid_print
+      print('[PROMOTION] Create failed with status: ${e.response?.statusCode}');
+      // ignore: avoid_print
+      print('[PROMOTION] Create failed with response data: ${e.response?.data}');
+      emit(MPromotionError("Lỗi tạo khuyến mãi: ${e.response?.statusCode} - ${e.response?.data ?? e.message}"));
+    } catch (e) {
+      emit(MPromotionError("Lỗi: $e"));
+    }
   }
   Future<void> toggleStatus(PromotionDto p) async {
     final data = p.toJson();
-    data['IsActive'] = !p.isActive; // Phải dùng 'IsActive' (viết hoa chữ I)
+    data['isActive'] = !p.isActive;
     await _repo.updatePromotion(p.id, data);
     load();
   }

@@ -52,28 +52,26 @@ class PromotionDto {
     );
   }
 
-  // Hàm toJson này đã được chỉnh sửa để khớp với API C# (PascalCase)
   Map<String, dynamic> toJson() {
-    return {
-      // Backend (C#) thường nhận PascalCase qua model binding
-      // Chúng ta giữ nguyên tên biến Flutter ở vế trái (key)
-      // và map chúng sang PascalCase ở vế phải.
-
-      'Id': id.isEmpty ? null : id,
-      'PromoName': promoName,
-      'Description': description,
-      'MinTierId': (minTierId == null || minTierId!.isEmpty) ? null : minTierId,
-      'PromoType': promoType.index,
-      'PointsCost': pointsCost,
-      'DiscountAmount': discountAmount,
-      'DiscountPercent': discountPercent,
-      'ValidFrom': validFrom.toIso8601String(),
-      'ValidTo': validTo.toIso8601String(),
-      'MaxUsesTotal': maxUsesTotal,
-      'MaxUsesPerCustomer': maxUsesPerCustomer,
-      'IsActive': isActive,
-      'CreatedBy': createdBy,
+    final map = <String, dynamic>{
+      'promoName': promoName,
+      'description': description,
+      'promoType': promoType.index,
+      'pointsCost': pointsCost,
+      'discountAmount': discountAmount,
+      'discountPercent': discountPercent,
+      'validFrom': validFrom.toUtc().toIso8601String(),
+      'validTo': validTo.toUtc().toIso8601String(),
+      'maxUsesPerCustomer': maxUsesPerCustomer,
+      'isActive': isActive,
     };
+
+    if (id.isNotEmpty) map['id'] = id;
+    if (minTierId != null && minTierId!.isNotEmpty) map['minTierId'] = minTierId;
+    if (maxUsesTotal != null) map['maxUsesTotal'] = maxUsesTotal;
+    if (createdBy != null) map['createdBy'] = createdBy;
+
+    return map;
   }
 
   bool get isValid {

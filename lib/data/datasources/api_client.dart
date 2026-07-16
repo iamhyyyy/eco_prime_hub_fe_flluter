@@ -8,8 +8,9 @@ class ApiClient {
 
   ApiClient() {
     dio.options.baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080/api';
-    dio.options.connectTimeout = const Duration(seconds: 15);
-    dio.options.receiveTimeout = const Duration(seconds: 15);
+    // Tăng timeout cho Render free-tier (có thể mất 30-60s khi wake up)
+    dio.options.connectTimeout = const Duration(seconds: 60);
+    dio.options.receiveTimeout = const Duration(seconds: 60);
 
     dio.interceptors.add(
       InterceptorsWrapper(
