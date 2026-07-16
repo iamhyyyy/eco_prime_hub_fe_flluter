@@ -83,10 +83,18 @@ class PromotionDto {
 
   String get promoTypeLabel {
     switch (promoType) {
-      case PromoType.percentage: return 'Giảm ${discountPercent.toStringAsFixed(0)}%';
-      case PromoType.flat: return 'Giảm ${discountAmount.toStringAsFixed(0)}đ';
-      case PromoType.pointsMultiplier: return 'Nhân điểm';
-      case PromoType.freeService: return 'Miễn phí';
+      case PromoType.discount:
+        return discountAmount > 0
+            ? 'Giảm ${discountAmount.toStringAsFixed(0)}đ'
+            : 'Giảm ${discountPercent.toStringAsFixed(0)}%';
+      case PromoType.freeWash:
+        return 'Miễn phí rửa xe';
+      case PromoType.addon:
+        return discountAmount > 0
+            ? 'Tặng kèm (Giảm ${discountAmount.toStringAsFixed(0)}đ)'
+            : 'Tặng kèm (Giảm ${discountPercent.toStringAsFixed(0)}%)';
+      case PromoType.pointBonus:
+        return 'Tặng thêm $pointsCost điểm';
     }
   }
 

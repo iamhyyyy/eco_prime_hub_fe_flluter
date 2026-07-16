@@ -32,6 +32,39 @@ class FeedbackDto {
         'bookingId': bookingId,
         'customerId': customerId,
         'rating': rating,
+        if (comment != null && comment!.isNotEmpty) 'comment': comment,
+      };
+}
+
+class CreateFeedbackDto {
+  final String bookingId;
+  final String customerId;
+  final int rating;
+  final String? comment;
+
+  CreateFeedbackDto({
+    required this.bookingId,
+    required this.customerId,
+    required this.rating,
+    this.comment,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'bookingId': bookingId,
+        'customerId': customerId,
+        'rating': rating,
+        if (comment != null && comment!.isNotEmpty) 'comment': comment,
+      };
+}
+
+class UpdateFeedbackDto {
+  final int rating;
+  final String? comment;
+
+  UpdateFeedbackDto({required this.rating, this.comment});
+
+  Map<String, dynamic> toJson() => {
+        'rating': rating,
         if (comment != null) 'comment': comment,
       };
 }

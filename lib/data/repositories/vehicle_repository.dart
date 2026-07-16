@@ -10,6 +10,12 @@ class VehicleRepository {
     return data.map((e) => VehicleDto.fromJson(e)).toList();
   }
 
+  Future<List<VehicleDto>> getAllVehicles() async {
+    final res = await _apiClient.dio.get('/vehicles');
+    final List data = res.data is List ? res.data : (res.data['data'] ?? []);
+    return data.map((e) => VehicleDto.fromJson(e)).toList();
+  }
+
   Future<VehicleDto> getVehicleById(String id) async {
     final res = await _apiClient.dio.get('/vehicle/$id');
     return VehicleDto.fromJson(res.data);
@@ -20,11 +26,7 @@ class VehicleRepository {
     return VehicleDto.fromJson(res.data);
   }
 
-  Future<void> updateVehicle(String id, Map<String, dynamic> data) async {
-    await _apiClient.dio.patch('/vehicle/$id', data: data);
-  }
-
-  Future<void> deleteVehicle(String id) async {
-    await _apiClient.dio.delete('/vehicles/$id');
+  Future<void> updateVehicle(String id, UpdateVehicleDto dto) async {
+    await _apiClient.dio.patch('/vehicle/$id', data: dto.toJson());
   }
 }

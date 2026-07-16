@@ -22,30 +22,71 @@ class BookingRepository {
   }
 
   Future<BookingDto> createBooking(CreateBookingDto dto) async {
-    print("===== REQUEST JSON =====");
-    print(dto.toJson());
-
-    final res = await _apiClient.dio.post(
-      '/booking',
-      data: dto.toJson(),
-    );
-
+    final res = await _apiClient.dio.post('/booking', data: dto.toJson());
     return BookingDto.fromJson(res.data);
   }
 
+  Future<void> updateBooking(String id, UpdateBookingDto dto) async {
+    await _apiClient.dio.patch('/booking/$id', data: dto.toJson());
+  }
+
   Future<void> cancelBooking(String id, String reason) async {
-    await _apiClient.dio.patch('/booking/$id', data: {'cancelReason': reason});
+    try {
+      await _apiClient.dio.delete('/booking/$id');
+    } catch (_) {
+      final booking = await getBookingById(id);
+      await updateBooking(
+        id,
+        UpdateBookingDto(
+          promoId: booking.promoId,
+          scheduledTime: booking.scheduledTime,
+          status: BookingStatus.cancelled,
+          paymentMethod: booking.paymentMethod,
+          cancelReason: reason.isEmpty ? null : reason,
+        ),
+      );
+    }
   }
 
-  Future<void> updateBookingStatus(String id, int status) async {
-    await _apiClient.dio.patch('/booking/$id', data: {'status': status});
+  Future<void> confirmBooking(BookingDto booking) async {
+    await updateBooking(
+      booking.id,
+      UpdateBookingDto(
+        promoId: booking.promoId,
+        scheduledTime: booking.scheduledTime,
+        status: BookingStatus.confirmed,
+        paymentMethod: booking.paymentMethod,
+        staffNotes: booking.staffNotes,
+      ),
+    );
   }
 
-  Future<void> checkinBooking(String id) async {
-    await _apiClient.dio.patch('/booking/$id');
+  Future<void> checkinBooking(BookingDto booking) async {
+    await updateBooking(
+      booking.id,
+      UpdateBookingDto(
+        promoId: booking.promoId,
+        scheduledTime: booking.scheduledTime,
+        checkinTime: DateTime.now(),
+        status: BookingStatus.inProgress,
+        paymentMethod: booking.paymentMethod,
+        staffNotes: booking.staffNotes,
+      ),
+    );
   }
 
-  Future<void> completeBooking(String id) async {
-    await _apiClient.dio.patch('/booking/$id/complete');
+  Future<void> completeBooking(BookingDto booking) async {
+    await updateBooking(
+      booking.id,
+      UpdateBookingDto(
+        promoId: booking.promoId,
+        scheduledTime: booking.scheduledTime,
+        checkinTime: booking.checkinTime ?? DateTime.now(),
+        completedTime: DateTime.now(),
+        status: BookingStatus.completed,
+        paymentMethod: booking.paymentMethod,
+        staffNotes: booking.staffNotes,
+      ),
+    );
   }
 }

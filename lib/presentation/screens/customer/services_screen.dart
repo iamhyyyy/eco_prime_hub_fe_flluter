@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/wash_service_model.dart';
 import '../../../data/repositories/wash_service_repository.dart';
+import 'booking_screen.dart';
 
 // ─── Cubit ────────────────────────────────────────────────────────────────
 abstract class ServiceState {}
@@ -33,19 +34,23 @@ class ServiceCubit extends Cubit<ServiceState> {
 
 // ─── Screen ───────────────────────────────────────────────────────────────
 class ServicesScreen extends StatelessWidget {
-  const ServicesScreen({super.key});
+  final String customerId;
+
+  const ServicesScreen({super.key, required this.customerId});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => ServiceCubit()..load(),
-      child: const _ServicesView(),
+      child: _ServicesView(customerId: customerId),
     );
   }
 }
 
 class _ServicesView extends StatelessWidget {
-  const _ServicesView();
+  final String customerId;
+
+  const _ServicesView({required this.customerId});
 
   @override
   Widget build(BuildContext context) {
@@ -76,13 +81,41 @@ class _ServicesView extends StatelessWidget {
           if (state.services.isEmpty) {
             return const Center(child: Text('Chưa có dịch vụ nào'));
           }
-          return RefreshIndicator(
-            onRefresh: () => ctx.read<ServiceCubit>().load(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.services.length,
-              itemBuilder: (_, i) => _ServiceCard(service: state.services[i]),
-            ),
+          final activeServices = state.services.where((s) => s.isActive).toList();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                color: Colors.white,
+                child: const Text(
+                  'Dịch vụ rửa xe',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => ctx.read<ServiceCubit>().load(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: activeServices.length,
+                    itemBuilder: (_, i) => _ServiceCard(
+                      service: activeServices[i],
+                      onBook: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BookingScreen(
+                            customerId: customerId,
+                            initialServiceId: activeServices[i].id,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
         return const SizedBox();
@@ -93,7 +126,9 @@ class _ServicesView extends StatelessWidget {
 
 class _ServiceCard extends StatelessWidget {
   final WashServiceDto service;
-  const _ServiceCard({required this.service});
+  final VoidCallback? onBook;
+
+  const _ServiceCard({required this.service, this.onBook});
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +185,21 @@ class _ServiceCard extends StatelessWidget {
                   '${_formatPrice(service.basePrice)}đ',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D47A1)),
                 ),
+                if (onBook != null && service.isActive) ...[
+                  const SizedBox(height: 6),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D47A1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: onBook,
+                    child: const Text('Đặt ngay', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
                 if (!service.isActive)
                   const Chip(
                     label: Text('Tạm ngưng', style: TextStyle(fontSize: 10, color: Colors.red)),

@@ -45,9 +45,9 @@ class VehicleDto {
 
   String get vehicleTypeLabel {
     switch (vehicleType) {
-      case VehicleType.sedan: return 'Sedan';
-      case VehicleType.suv: return 'SUV';
-      case VehicleType.motorcycle: return 'Xe máy';
+      case VehicleType.motorbike: return 'Xe máy';
+      case VehicleType.scooter: return 'Xe tay ga';
+      case VehicleType.other: return 'Khác';
     }
   }
 }
@@ -76,5 +76,35 @@ class CreateVehicleDto {
         'brand': brand,
         'model': model,
         'color': color,
+      };
+}
+
+class UpdateVehicleDto {
+  final String customerId;
+  final String licensePlate;
+  final VehicleType vehicleType;
+  final String brand;
+  final String model;
+  final String color;
+  final bool isActive;
+
+  UpdateVehicleDto({
+    required this.customerId,
+    required this.licensePlate,
+    required this.vehicleType,
+    required this.brand,
+    required this.model,
+    required this.color,
+    required this.isActive,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'customerId': customerId,
+        'licensePlate': licensePlate,
+        'vehicleType': vehicleType.index,
+        'brand': brand,
+        'model': model,
+        'color': color,
+        'isActive': isActive,
       };
 }
