@@ -81,13 +81,16 @@ class _ProfileView extends StatelessWidget {
           // Header gradient
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 30, 20, 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(colors: [Color(0xFF0D47A1), Color(0xFF00838F)]),
               borderRadius: BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
             ),
-            child: Column(
-              children: [
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                child: Column(
+                  children: [
                 CircleAvatar(
                   radius: 42,
                   backgroundColor: Colors.white.withValues(alpha: 0.25),
@@ -113,6 +116,8 @@ class _ProfileView extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
 
           // Stats row
           if (profile != null) ...[

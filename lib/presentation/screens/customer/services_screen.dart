@@ -82,9 +82,10 @@ class _ServicesView extends StatelessWidget {
             return const Center(child: Text('Chưa có dịch vụ nào'));
           }
           final activeServices = state.services.where((s) => s.isActive).toList();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          return SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -116,7 +117,7 @@ class _ServicesView extends StatelessWidget {
                 ),
               ),
             ],
-          );
+          ));
         }
         return const SizedBox();
       },
@@ -163,7 +164,8 @@ class _ServiceCard extends StatelessWidget {
                     Text(service.description!, style: const TextStyle(color: Colors.grey, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 6),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Icon(Icons.access_time, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),

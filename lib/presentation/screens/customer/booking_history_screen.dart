@@ -213,8 +213,9 @@ class _HistoryViewState extends State<_HistoryView> {
 
         final filtered = _filtered(state.bookings);
 
-        return Column(
-          children: [
+        return SafeArea(
+          child: Column(
+            children: [
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -255,7 +256,7 @@ class _HistoryViewState extends State<_HistoryView> {
                     ),
             ),
           ],
-        );
+        ));
       },
     );
   }

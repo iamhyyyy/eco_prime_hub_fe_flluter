@@ -722,12 +722,51 @@ class _AddUserDialogState extends State<_AddUserDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(controller: _userName, decoration: const InputDecoration(labelText: 'Tên đăng nhập (Username)*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
-              TextFormField(controller: _email, decoration: const InputDecoration(labelText: 'Email*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
-              TextFormField(controller: _password, decoration: const InputDecoration(labelText: 'Mật khẩu*'), obscureText: true, validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
-              TextFormField(controller: _firstName, decoration: const InputDecoration(labelText: 'Tên*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
-              TextFormField(controller: _lastName, decoration: const InputDecoration(labelText: 'Họ*'), validator: (v) => v!.isEmpty ? 'Bắt buộc' : null),
-              TextFormField(controller: _phone, decoration: const InputDecoration(labelText: 'Số điện thoại')),
+              TextFormField(
+                controller: _userName,
+                decoration: const InputDecoration(labelText: 'Tên đăng nhập (Username)*'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Bắt buộc nhập username' : null,
+              ),
+              TextFormField(
+                controller: _email,
+                decoration: const InputDecoration(labelText: 'Email*'),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Bắt buộc nhập email';
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) return 'Email không hợp lệ';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _password,
+                decoration: const InputDecoration(labelText: 'Mật khẩu*'),
+                obscureText: true,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Bắt buộc nhập mật khẩu';
+                  if (v.length < 6) return 'Mật khẩu phải chứa ít nhất 6 ký tự';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _firstName,
+                decoration: const InputDecoration(labelText: 'Tên*'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Bắt buộc nhập tên' : null,
+              ),
+              TextFormField(
+                controller: _lastName,
+                decoration: const InputDecoration(labelText: 'Họ*'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Bắt buộc nhập họ' : null,
+              ),
+              TextFormField(
+                controller: _phone,
+                decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                keyboardType: TextInputType.phone,
+                validator: (v) {
+                  if (v != null && v.trim().isNotEmpty && !RegExp(r'^\d+$').hasMatch(v.trim())) {
+                    return 'Số điện thoại chỉ được chứa chữ số';
+                  }
+                  return null;
+                },
+              ),
               const SizedBox(height: 10),
               InkWell(
                 onTap: () async {
