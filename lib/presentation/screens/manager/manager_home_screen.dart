@@ -127,20 +127,24 @@ class _ManagerHomeScreenState extends State<ManagerHomeScreen> {
           ],
         ),
         floatingActionButton: _selectedIndex == 1
-            ? FloatingActionButton.extended(
-                backgroundColor: const Color(0xFF004D40),
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Thêm User'),
-                onPressed: () => _showAddUserDialog(context),
+            ? Builder(
+                builder: (fabCtx) => FloatingActionButton.extended(
+                  backgroundColor: const Color(0xFF004D40),
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Thêm User'),
+                  onPressed: () => _showAddUserDialog(fabCtx),
+                ),
               )
             : _selectedIndex == 2
-                ? FloatingActionButton.extended(
-                    backgroundColor: const Color(0xFF004D40),
-                    foregroundColor: Colors.white,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Thêm xe'),
-                    onPressed: () => showManagerAddVehicleSheet(context),
+                ? Builder(
+                    builder: (fabCtx) => FloatingActionButton.extended(
+                      backgroundColor: const Color(0xFF004D40),
+                      foregroundColor: Colors.white,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Thêm xe'),
+                      onPressed: () => showManagerAddVehicleSheet(fabCtx),
+                    ),
                   )
                 : null,
       ),
@@ -148,10 +152,11 @@ class _ManagerHomeScreenState extends State<ManagerHomeScreen> {
   }
 
   void _showAddUserDialog(BuildContext context) {
+    final cubit = context.read<ManagerUserCubit>();
     showDialog(
       context: context,
       builder: (_) => _AddUserDialog(
-        onSubmit: (dto) => context.read<ManagerUserCubit>().createUser(dto),
+        onSubmit: (dto) => cubit.createUser(dto),
       ),
     );
   }
@@ -186,34 +191,41 @@ class _ManagerUsersPage extends StatelessWidget {
                 final u = state.users[i];
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
-                  child: ListTile(
-                    onTap: () => _showUserDetailsDialog(context, u),
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
-                      child: Text(u.firstName.isNotEmpty ? u.firstName[0] : '?', style: const TextStyle(color: Color(0xFF004D40), fontWeight: FontWeight.bold)),
-                    ),
-                    title: Text(u.fullName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(u.email, style: const TextStyle(fontSize: 12)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: u.isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                  ),
+                  child: Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    child: ListTile(
+                      onTap: () => _showUserDetailsDialog(context, u),
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF004D40).withValues(alpha: 0.1),
+                        child: Text(u.firstName.isNotEmpty ? u.firstName[0] : '?', style: const TextStyle(color: Color(0xFF004D40), fontWeight: FontWeight.bold)),
+                      ),
+                      title: Text(u.fullName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(u.email, style: const TextStyle(fontSize: 12)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: u.isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(u.isActive ? 'Active' : 'Locked', style: TextStyle(color: u.isActive ? Colors.green : Colors.red, fontSize: 11)),
                           ),
-                          child: Text(u.isActive ? 'Active' : 'Locked', style: TextStyle(color: u.isActive ? Colors.green : Colors.red, fontSize: 11)),
-                        ),
-                        IconButton(
-                          icon: Icon(u.isActive ? Icons.lock_outline : Icons.lock_open, size: 20, color: u.isActive ? Colors.red : Colors.green),
-                          onPressed: () {
-                            if (u.isActive) ctx.read<ManagerUserCubit>().lockUser(u.id);
-                            else ctx.read<ManagerUserCubit>().unlockUser(u.id);
-                          },
-                        ),
-                      ],
+                          IconButton(
+                            icon: Icon(u.isActive ? Icons.lock_outline : Icons.lock_open, size: 20, color: u.isActive ? Colors.red : Colors.green),
+                            onPressed: () {
+                              if (u.isActive) ctx.read<ManagerUserCubit>().lockUser(u.id);
+                              else ctx.read<ManagerUserCubit>().unlockUser(u.id);
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
