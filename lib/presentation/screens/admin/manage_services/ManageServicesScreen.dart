@@ -69,7 +69,7 @@ class ManageServicesScreen extends StatelessWidget {
                                 children: [
                                   Switch(
                                     value: s.isActive,
-                                    activeColor: Colors.green,
+                                    activeThumbColor: Colors.green,
                                     onChanged: (newValue) {
                                       innerContext.read<ManageWashServiceCubit>().toggleServiceStatus(s);
                                     },

@@ -460,7 +460,7 @@ class _InfoTabState extends State<_InfoTab> {
         const Text('Thay đổi Tier', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _selectedTierId,
+          initialValue: _selectedTierId,
           decoration: InputDecoration(
             labelText: 'Chọn Tier',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -507,9 +507,11 @@ class _InfoTabState extends State<_InfoTab> {
         );
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cập nhật thất bại!'), backgroundColor: Colors.red),
       );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

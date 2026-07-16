@@ -14,6 +14,7 @@ class PromotionDto {
   final int? maxUsesTotal;
   final int maxUsesPerCustomer;
   final bool isActive;
+  final String? createdBy; // Thêm trường này theo database
 
   PromotionDto({
     required this.id,
@@ -29,6 +30,7 @@ class PromotionDto {
     this.maxUsesTotal,
     required this.maxUsesPerCustomer,
     required this.isActive,
+    this.createdBy,
   });
 
   factory PromotionDto.fromJson(Map<String, dynamic> json) {
@@ -46,7 +48,32 @@ class PromotionDto {
       maxUsesTotal: json['maxUsesTotal'],
       maxUsesPerCustomer: json['maxUsesPerCustomer'] ?? 1,
       isActive: json['isActive'] ?? true,
+      createdBy: json['createdBy']?.toString(),
     );
+  }
+
+  // Hàm toJson này đã được chỉnh sửa để khớp với API C# (PascalCase)
+  Map<String, dynamic> toJson() {
+    return {
+      // Backend (C#) thường nhận PascalCase qua model binding
+      // Chúng ta giữ nguyên tên biến Flutter ở vế trái (key)
+      // và map chúng sang PascalCase ở vế phải.
+
+      'Id': id.isEmpty ? null : id,
+      'PromoName': promoName,
+      'Description': description,
+      'MinTierId': (minTierId == null || minTierId!.isEmpty) ? null : minTierId,
+      'PromoType': promoType.index,
+      'PointsCost': pointsCost,
+      'DiscountAmount': discountAmount,
+      'DiscountPercent': discountPercent,
+      'ValidFrom': validFrom.toIso8601String(),
+      'ValidTo': validTo.toIso8601String(),
+      'MaxUsesTotal': maxUsesTotal,
+      'MaxUsesPerCustomer': maxUsesPerCustomer,
+      'IsActive': isActive,
+      'CreatedBy': createdBy,
+    };
   }
 
   bool get isValid {
@@ -71,7 +98,6 @@ class PromotionDto {
     }
   }
 
-  // So sánh theo id để Dropdown không bị crash khi reload data
   @override
   bool operator ==(Object other) => other is PromotionDto && other.id == id;
 
