@@ -154,7 +154,7 @@ class _VehiclesView extends StatelessWidget {
                 TextField(controller: colorCtrl, decoration: const InputDecoration(labelText: 'Màu sắc', border: OutlineInputBorder())),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<VehicleType>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: const InputDecoration(labelText: 'Loại xe', border: OutlineInputBorder()),
                   items: const [
                     DropdownMenuItem(value: VehicleType.sedan, child: Text('Sedan')),

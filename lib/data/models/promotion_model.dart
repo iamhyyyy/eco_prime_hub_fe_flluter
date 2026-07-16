@@ -55,6 +55,10 @@ class PromotionDto {
   // Hàm toJson này đã được chỉnh sửa để khớp với API C# (PascalCase)
   Map<String, dynamic> toJson() {
     return {
+      // Backend (C#) thường nhận PascalCase qua model binding
+      // Chúng ta giữ nguyên tên biến Flutter ở vế trái (key)
+      // và map chúng sang PascalCase ở vế phải.
+
       'Id': id.isEmpty ? null : id,
       'PromoName': promoName,
       'Description': description,

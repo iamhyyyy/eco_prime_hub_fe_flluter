@@ -92,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: Colors.white30, width: 1.5),
                         ),
@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       const SizedBox(height: 6),
                       Text(
                         'Hệ thống rửa xe thông minh',
-                        style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 14),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 14),
                       ),
                       const SizedBox(height: 40),
 
@@ -123,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 30,
                               offset: const Offset(0, 15),
                             )

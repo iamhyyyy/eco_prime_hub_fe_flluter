@@ -366,7 +366,7 @@ class _BookingFormState extends State<_BookingForm> {
 
   Widget _promoPicker(List<PromotionDto> promos) {
     return DropdownButtonFormField<PromotionDto>(
-      value: _selectedPromo,
+      initialValue: _selectedPromo,
       hint: const Text('Không dùng khuyến mãi'),
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
